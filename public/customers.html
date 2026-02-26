@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Banking DBMS — Customers</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-wrap">
+                <div class="logo-icon">🏦</div>
+                <div class="logo-text">
+                    <div class="logo-title">BankingOS</div>
+                    <div class="logo-sub">Database Management System</div>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+            <div class="nav-section-label">Manage</div>
+            <a href="banks.html" class="nav-item"><span class="nav-icon">🏛️</span> Banks</a>
+            <a href="customers.html" class="nav-item active"><span class="nav-icon">👤</span> Customers</a>
+            <a href="accounts.html" class="nav-item"><span class="nav-icon">💳</span> Bank Accounts</a>
+            <a href="transactions.html" class="nav-item"><span class="nav-icon">💸</span> Transactions</a>
+            <div class="nav-section-label">Database</div>
+            <a href="schema.html" class="nav-item"><span class="nav-icon">🗄️</span> DB Explorer</a>
+            <a href="sql.html" class="nav-item"><span class="nav-icon">🖥️</span> SQL Console</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-dot"></div>
+            <div class="sidebar-footer-text">System Online · CIA Project</div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-title">Customers</div>
+                <div class="topbar-breadcrumb">Customers table — all attributes + LEFT JOIN aggregates (accounts &amp;
+                    transactions)</div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-chip" id="cust-count"><span class="dot"></span>—</div>
+            </div>
+        </div>
+
+        <div class="page-content">
+
+            <div class="schema-strip">
+                <div class="schema-pill pk-pill">🔑 PK: AccHolder_Id</div>
+                <div class="schema-pill join-pill">⋉ LEFT JOIN: BankAccount (account counts)</div>
+                <div class="schema-pill join-pill">⋉ LEFT JOIN: Txn (transaction totals)</div>
+            </div>
+
+            <div class="section-header">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Search customers…" />
+                </div>
+                <button class="btn btn-gold" onclick="openAddModal()">＋ Add Customer</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="data-table" id="cust-table">
+                    <thead>
+                        <tr>
+                            <th><span class="col-badge pk-badge">PK</span> AccHolder_Id</th>
+                            <th>FirstName</th>
+                            <th>MiddleName</th>
+                            <th>LastName</th>
+                            <th>Age</th>
+                            <th>Sex</th>
+                            <th>Accounts <span class="col-badge join-badge">LEFT JOIN</span></th>
+                            <th>Total Balance <span class="col-badge join-badge">LEFT JOIN</span></th>
+                            <th>Credits <span class="col-badge join-badge">LEFT JOIN</span></th>
+                            <th>Debits <span class="col-badge join-badge">LEFT JOIN</span></th>
+                            <th>Payments <span class="col-badge join-badge">LEFT JOIN</span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cust-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="cust-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Add Customer</h2>
+                <button class="modal-close" onclick="closeModal('cust-modal')">✕</button>
+            </div>
+            <form id="cust-form">
+                <input type="hidden" id="edit-id" />
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input class="form-input" id="f-first" placeholder="First Name" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Middle Name <span
+                                style="color:var(--text-muted);font-size:10px">(optional)</span></label>
+                        <input class="form-input" id="f-middle" placeholder="Middle Name" />
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">Last Name</label>
+                        <input class="form-input" id="f-last" placeholder="Last Name" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Age</label>
+                        <input class="form-input" id="f-age" type="number" min="18" max="120" placeholder="e.g. 29"
+                            required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sex</label>
+                        <select class="form-select" id="f-sex" required>
+                            <option value="">Select…</option>
+                            <option>Male</option>
+                            <option>Female</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('cust-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+    <script>
+        let custs = [], joinData = [];
+
+        const avatarColors = [
+            ['#2563eb', '#1d4ed8'], ['#7c3aed', '#6d28d9'], ['#059669', '#047857'],
+            ['#dc2626', '#b91c1c'], ['#d97706', '#b45309'], ['#0891b2', '#0e7490'],
+        ];
+
+        async function load() {
+            renderSkeletonRows('cust-tbody', 5, 12);
+            try {
+                [custs, joinData] = await Promise.all([
+                    apiFetch('/api/customers'),
+                    apiFetch('/api/schema/joins').then(r => r.customerSummary?.data || [])
+                ]);
+                document.getElementById('cust-count').innerHTML = `<span class="dot"></span>${custs.length} customer${custs.length !== 1 ? 's' : ''}`;
+                render();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        function render() {
+            const tbody = document.getElementById('cust-tbody');
+            if (!custs.length) {
+                tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><span class="empty-state-icon">👤</span><div class="empty-state-title">No Customers Yet</div></div></td></tr>`;
+                return;
+            }
+            const icons = { Male: '👨', Female: '👩', Other: '🧑' };
+            tbody.innerHTML = custs.map((c, i) => {
+                const jd = joinData.find(j => j.AccHolder_Id === c.AccHolder_Id) || {};
+                const [from, to] = avatarColors[i % avatarColors.length];
+                return `
+    <tr class="row-stagger" style="animation-delay:${i * 55}ms" onclick="toggleDrawer(this,${c.AccHolder_Id})">
+      <td><span class="pk-value mono">🔑 ${String(c.AccHolder_Id).padStart(3, '0')}</span></td>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar-initials" style="background:linear-gradient(135deg,${from},${to})">${c.FirstName[0]}${c.LastName[0]}</div>
+        <strong>${c.FirstName}</strong>
+      </div></td>
+      <td class="text-muted">${c.MiddleName || '<span style="opacity:.4">—</span>'}</td>
+      <td><strong>${c.LastName}</strong></td>
+      <td class="text-muted">${c.Age} <span style="font-size:11px">yrs</span></td>
+      <td><span class="badge ${c.Sex === 'Male' ? 'badge-savings' : c.Sex === 'Female' ? 'badge-payment' : 'badge-frozen'}">${icons[c.Sex] || ''} ${c.Sex}</span></td>
+      <td><span class="badge badge-currency">${jd.total_accounts ?? 0}</span></td>
+      <td class="amount-positive">${formatCurrency(jd.total_balance ?? 0)}</td>
+      <td class="amount-positive">+${formatCurrency(jd.total_credits ?? 0)}</td>
+      <td class="amount-negative">–${formatCurrency(jd.total_debits ?? 0)}</td>
+      <td class="amount-neutral">↓${formatCurrency(jd.total_payments ?? 0)}</td>
+      <td onclick="event.stopPropagation()" style="display:flex;gap:8px">
+        <button class="btn btn-edit" onclick="openEdit(${c.AccHolder_Id})">✏️ Edit</button>
+        <button class="btn btn-del"  onclick="del(${c.AccHolder_Id},'${(c.FirstName + ' ' + c.LastName).replace(/'/g, "\\\'")}')">🗑️</button>
+      </td>
+    </tr>
+    <tr class="row-drawer-row" id="cdrawer-${c.AccHolder_Id}" style="display:none">
+      <td colspan="12">
+        <div class="row-drawer">
+          <div class="drawer-title">📋 Full Record — Customers</div>
+          <div class="drawer-grid">
+            <div class="drawer-field"><span class="drawer-key pk-text">🔑 AccHolder_Id (PK)</span><span class="drawer-val mono">${c.AccHolder_Id}</span></div>
+            <div class="drawer-field"><span class="drawer-key">FirstName</span><span class="drawer-val">${c.FirstName}</span></div>
+            <div class="drawer-field"><span class="drawer-key">MiddleName</span><span class="drawer-val">${c.MiddleName || '—'}</span></div>
+            <div class="drawer-field"><span class="drawer-key">LastName</span><span class="drawer-val">${c.LastName}</span></div>
+            <div class="drawer-field"><span class="drawer-key">Age</span><span class="drawer-val">${c.Age}</span></div>
+            <div class="drawer-field"><span class="drawer-key">Sex</span><span class="drawer-val">${c.Sex}</span></div>
+            <div class="drawer-field"><span class="drawer-key join-text">⋉ total_accounts (LEFT JOIN BankAccount)</span><span class="drawer-val">${jd.total_accounts ?? 0}</span></div>
+            <div class="drawer-field"><span class="drawer-key join-text">⋉ total_balance (LEFT JOIN BankAccount)</span><span class="drawer-val amount-positive">${formatCurrency(jd.total_balance ?? 0)}</span></div>
+            <div class="drawer-field"><span class="drawer-key join-text">⋉ total_credits (LEFT JOIN Txn)</span><span class="drawer-val amount-positive">+${formatCurrency(jd.total_credits ?? 0)}</span></div>
+            <div class="drawer-field"><span class="drawer-key join-text">⋉ total_debits (LEFT JOIN Txn)</span><span class="drawer-val amount-negative">–${formatCurrency(jd.total_debits ?? 0)}</span></div>
+            <div class="drawer-field"><span class="drawer-key join-text">⋉ total_payments (LEFT JOIN Txn)</span><span class="drawer-val amount-neutral">↓${formatCurrency(jd.total_payments ?? 0)}</span></div>
+          </div>
+          <div class="drawer-rel">
+            <span class="rel-arrow">AccHolder_Id → BankAccount.AccHolder_Id</span>
+            <span class="rel-arrow">AccHolder_Id → Txn.AccHolder_Id</span>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+            }).join('');
+        }
+
+        function toggleDrawer(row, id) {
+            const drawerRow = document.getElementById('cdrawer-' + id);
+            if (!drawerRow) return;
+            const isOpen = drawerRow.style.display !== 'none';
+            document.querySelectorAll('.row-drawer-row').forEach(r => r.style.display = 'none');
+            document.querySelectorAll('.row-stagger').forEach(r => r.classList.remove('row-selected'));
+            if (!isOpen) { drawerRow.style.display = ''; row.classList.add('row-selected'); }
+        }
+
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = 'Add Customer';
+            document.getElementById('edit-id').value = '';
+            ['f-first', 'f-middle', 'f-last', 'f-age'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('f-sex').value = '';
+            openModal('cust-modal');
+        }
+
+        function openEdit(id) {
+            const c = custs.find(x => x.AccHolder_Id === id);
+            if (!c) return;
+            document.getElementById('modal-title').textContent = 'Edit Customer';
+            document.getElementById('edit-id').value = id;
+            document.getElementById('f-first').value = c.FirstName;
+            document.getElementById('f-middle').value = c.MiddleName || '';
+            document.getElementById('f-last').value = c.LastName;
+            document.getElementById('f-age').value = c.Age;
+            document.getElementById('f-sex').value = c.Sex;
+            openModal('cust-modal');
+        }
+
+        function del(id, name) {
+            showConfirm({
+                title: 'Delete Customer?',
+                message: `"${name}" and all linked accounts/transactions will be permanently removed.`,
+                icon: '🗑️', confirmText: 'Yes, Delete',
+                onConfirm: async () => {
+                    try { await apiFetch(`/api/customers/${id}`, 'DELETE'); showToast('Customer deleted', 'success'); load(); }
+                    catch (e) { showToast(e.message, 'error'); }
+                }
+            });
+        }
+
+        document.getElementById('cust-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const body = {
+                FirstName: document.getElementById('f-first').value.trim(),
+                MiddleName: document.getElementById('f-middle').value.trim(),
+                LastName: document.getElementById('f-last').value.trim(),
+                Age: parseInt(document.getElementById('f-age').value),
+                Sex: document.getElementById('f-sex').value,
+            };
+            try {
+                if (id) { await apiFetch(`/api/customers/${id}`, 'PUT', body); showToast('Customer updated ✓', 'success'); }
+                else { await apiFetch('/api/customers', 'POST', body); showToast('Customer created ✓', 'success'); }
+                closeModal('cust-modal'); load();
+            } catch (e) { showToast(e.message, 'error'); }
+        });
+
+        filterTable('search-input', 'cust-table');
+        load();
+    </script>
+</body>
+
+</html>

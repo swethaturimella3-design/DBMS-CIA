@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Banking DBMS — DB Explorer</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-wrap">
+                <div class="logo-icon">🏦</div>
+                <div class="logo-text">
+                    <div class="logo-title">BankingOS</div>
+                    <div class="logo-sub">Database Management System</div>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+            <div class="nav-section-label">Manage</div>
+            <a href="banks.html" class="nav-item"><span class="nav-icon">🏛️</span> Banks</a>
+            <a href="customers.html" class="nav-item"><span class="nav-icon">👤</span> Customers</a>
+            <a href="accounts.html" class="nav-item"><span class="nav-icon">💳</span> Bank Accounts</a>
+            <a href="transactions.html" class="nav-item"><span class="nav-icon">💸</span> Transactions</a>
+            <div class="nav-section-label">Database</div>
+            <a href="schema.html" class="nav-item active"><span class="nav-icon">🗄️</span> DB Explorer</a>
+            <a href="sql.html" class="nav-item"><span class="nav-icon">🖥️</span> SQL Console</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-dot"></div>
+            <div class="sidebar-footer-text">System Online · CIA Project</div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-title">Database Explorer</div>
+                <div class="topbar-breadcrumb">Tables · JOINs · Triggers · Cursor Simulation · ER Diagram</div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-chip"><span class="dot"></span>9 Triggers Active</div>
+                <div class="topbar-chip">4 JOINs</div>
+            </div>
+        </div>
+
+        <div class="page-content">
+
+            <!-- ── 5 Tabs ─────────────────────────────────────────────── -->
+            <div class="schema-tabs">
+                <div class="schema-tab active" onclick="switchTab('tables')">🗂️ Tables &amp; PK/FK</div>
+                <div class="schema-tab" onclick="switchTab('joins')">⋈ JOIN Queries</div>
+                <div class="schema-tab" onclick="switchTab('triggers')">⚡ Triggers &amp; Logs</div>
+                <div class="schema-tab" onclick="switchTab('cursor')">🖱️ Cursor Simulation</div>
+                <div class="schema-tab" onclick="switchTab('er')">📐 ER Diagram</div>
+            </div>
+
+            <!-- ── Tab 1: Tables & PK/FK ─────────────────────────────── -->
+            <div class="schema-panel active" id="panel-tables">
+                <div id="tables-content">
+                    <div class="empty-state"><span class="empty-state-icon">⏳</span>
+                        <div class="empty-state-title">Loading tables…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Tab 2: JOINs ──────────────────────────────────────── -->
+            <div class="schema-panel" id="panel-joins">
+                <div id="joins-content">
+                    <div class="empty-state"><span class="empty-state-icon">⏳</span>
+                        <div class="empty-state-title">Loading JOINs…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Tab 3: Triggers ────────────────────────────────────── -->
+            <div class="schema-panel" id="panel-triggers">
+                <div id="triggers-content">
+                    <div class="empty-state"><span class="empty-state-icon">⏳</span>
+                        <div class="empty-state-title">Loading triggers…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Tab 4: Cursor ─────────────────────────────────────── -->
+            <div class="schema-panel" id="panel-cursor">
+                <div style="margin-bottom:18px;display:flex;gap:12px;align-items:center">
+                    <button class="btn btn-gold" id="run-cursor-btn" onclick="runCursor()">▶ Run Cursor
+                        Simulation</button>
+                    <div style="font-size:13px;color:var(--text-secondary)">Simulates DECLARE → OPEN → FETCH → CLOSE per
+                        customer</div>
+                </div>
+                <div id="cursor-content"></div>
+            </div>
+
+            <!-- ── Tab 5: ER Diagram ──────────────────────────────────── -->
+            <div class="schema-panel" id="panel-er">
+                <div id="er-content"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+    <script>
+        // ── Tab switching ─────────────────────────────────────────────
+        const tabLoaded = {};
+        function switchTab(name) {
+            document.querySelectorAll('.schema-tab').forEach((t, i) => {
+                t.classList.toggle('active', ['tables', 'joins', 'triggers', 'cursor', 'er'][i] === name);
+            });
+            document.querySelectorAll('.schema-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-' + name).classList.add('active');
+            if (!tabLoaded[name]) { tabLoaded[name] = true; loadTab(name); }
+        }
+
+        function loadTab(name) {
+            if (name === 'tables') loadTables();
+            if (name === 'joins') loadJoins();
+            if (name === 'triggers') loadTriggers();
+            if (name === 'er') renderER();
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────
+        const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+        const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        const badgeHtml = (key) => key === 'PK'
+            ? '<span class="col-badge pk-badge">PK</span>'
+            : key === 'FK' ? '<span class="col-badge fk-badge">FK</span>' : '';
+
+        function genericTable(data, title = '') {
+            if (!data?.length) return `<div class="empty-state"><span class="empty-state-icon">📭</span><div class="empty-state-title">No data</div></div>`;
+            const cols = Object.keys(data[0]);
+            return `
+    ${title ? `<div class="chart-card-title" style="margin-bottom:12px">${title}</div>` : ''}
+    <div class="table-wrapper" style="margin-bottom:24px">
+      <table class="data-table">
+        <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+        <tbody>${data.map((r, i) => `
+          <tr class="row-stagger" style="animation-delay:${i * 40}ms">
+            ${cols.map(c => `<td class="${typeof r[c] === 'number' && c.toLowerCase().includes('balance') ? 'amount-positive' : 'mono' in r ? '' : ''}">${r[c] ?? '—'}</td>`).join('')}
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+        }
+
+        // ── Tab 1: Tables & PK/FK ─────────────────────────────────────
+        async function loadTables() {
+            try {
+                const [tables, pkfk] = await Promise.all([
+                    apiFetch('/api/schema/tables'),
+                    apiFetch('/api/schema/pk-fk'),
+                ]);
+                const tableOrder = ['Bank', 'Customers', 'BankAccount', 'LinkedCards', 'Txn'];
+                let html = '';
+                tableOrder.forEach(tname => {
+                    const meta = pkfk[tname];
+                    const data = tables[tname] || [];
+                    html += `
+        <div class="chart-card" style="margin-bottom:20px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+            <div>
+              <div class="chart-card-title">📋 ${tname}</div>
+              <div class="chart-card-sub">${data.length} row${data.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;max-width:400px;justify-content:flex-end">
+              ${(meta?.columns || []).map(c => `
+                <span style="font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:4px;
+                  background:${c.key === 'PK' ? 'rgba(246,201,14,0.12)' : c.key === 'FK' ? 'rgba(96,165,250,0.1)' : 'rgba(255,255,255,0.04)'};
+                  color:${c.key === 'PK' ? 'var(--gold)' : c.key === 'FK' ? 'var(--blue)' : 'var(--text-secondary)'};
+                  border:1px solid ${c.key === 'PK' ? 'rgba(246,201,14,0.25)' : c.key === 'FK' ? 'rgba(96,165,250,0.2)' : 'var(--border)'}">
+                  ${c.key ? badgeHtml(c.key) : ''}${c.name}: ${c.type}
+                </span>`).join('')}
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead><tr>
+                ${(meta?.columns || []).map(c => `<th>${badgeHtml(c.key)}${c.name}</th>`).join('')}
+              </tr></thead>
+              <tbody>
+                ${data.map((row, i) => `
+                  <tr class="row-stagger" style="animation-delay:${i * 45}ms">
+                    ${(meta?.columns || []).map(c => {
+                        const v = row[c.name] ?? '—';
+                        let cls = '';
+                        if (c.key === 'PK') cls = 'pk-text mono';
+                        if (c.key === 'FK') cls = 'fk-text mono';
+                        if (c.name.toLowerCase().includes('balance')) cls = 'amount-positive';
+                        return `<td class="${cls}">${c.key === 'PK' ? '🔑 ' : ''}${c.key === 'FK' ? '🔗 ' : ''}${v}</td>`;
+                    }).join('')}
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          ${(meta?.foreignKeys || []).length ? `
+            <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+              ${meta.foreignKeys.map(fk => `
+                <span class="rel-arrow">
+                  ${tname}.${fk.column} → ${fk.refTable}(${fk.refColumn})
+                </span>`).join('')}
+            </div>` : ''}
+        </div>`;
+                });
+
+                // Show TransactionLog and AccountAuditLog too
+                ['TransactionLog', 'AccountAuditLog'].forEach(t => {
+                    html += genericTable(tables[t], `${t === 'TransactionLog' ? '⚡' : '🔍'} ${t} (Trigger Output)`);
+                });
+
+                document.getElementById('tables-content').innerHTML = html;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // ── Tab 2: JOINs ─────────────────────────────────────────────
+        async function loadJoins() {
+            try {
+                const joins = await apiFetch('/api/schema/joins');
+                const joinOrder = ['customerAccountProfile', 'transactionDetails', 'customerSummary', 'accountsWithCards'];
+                const joinIcons = { customerAccountProfile: '👤', transactionDetails: '💸', customerSummary: '📊', accountsWithCards: '💳' };
+                let html = '';
+                joinOrder.forEach(key => {
+                    const j = joins[key];
+                    if (!j) return;
+                    const cols = j.data?.length ? Object.keys(j.data[0]) : [];
+                    html += `
+        <div class="chart-card" style="margin-bottom:24px">
+          <div class="chart-card-title">${joinIcons[key] || '⋈'} ${j.description || key}</div>
+          <div class="code-block">${j.sql || ''}</div>
+          <div style="margin-top:12px">
+            ${genericTable(j.data || [])}
+          </div>
+        </div>`;
+                });
+                document.getElementById('joins-content').innerHTML = html || '<div class="empty-state"><span class="empty-state-icon">📭</span><div class="empty-state-title">No JOIN data</div></div>';
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // ── Tab 3: Triggers ───────────────────────────────────────────
+        async function loadTriggers() {
+            try {
+                const data = await apiFetch('/api/schema/triggers');
+                const { triggerDefs = [], txnLog = [], accLog = [] } = data;
+
+                const actionBadge = a => {
+                    const map = { INSERT: 'badge-active', UPDATE: 'badge-transfer', DELETE: 'badge-debit' };
+                    return `<span class="badge ${map[a] || ''}">${a}</span>`;
+                };
+
+                let html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px">
+      <div>
+        <div class="section-title" style="margin-bottom:14px;font-size:15px">⚡ Trigger Definitions (${triggerDefs.length} total)</div>
+        ${triggerDefs.map(t => {
+                    const type = t.name.includes('balance') ? 'BALANCE' : t.name.includes('account') ? 'ACCOUNT AUDIT' : 'TXN AUDIT';
+                    return `
+          <div class="trigger-def-card">
+            <div class="trigger-name">⚡ ${t.name} <span class="trigger-type-badge">${type}</span></div>
+            <div class="code-block" style="font-size:10.5px;max-height:160px;overflow-y:auto">${(t.sql || '').replace(/</g, '&lt;')}</div>
+          </div>`;
+                }).join('')}
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:14px;font-size:15px">📋 Transaction Audit Log (TransactionLog)</div>
+        ${txnLog.length ? `
+        <div class="table-wrapper"><table class="data-table">
+          <thead><tr><th>log_id</th><th>action</th><th>Txn_id</th><th>Account_no</th><th>type</th><th>old_amt</th><th>new_amt</th><th>logged_at</th></tr></thead>
+          <tbody>${txnLog.map((l, i) => `
+            <tr class="row-stagger" style="animation-delay:${i * 40}ms">
+              <td class="mono text-muted">${l.log_id}</td>
+              <td>${actionBadge(l.action)}</td>
+              <td class="mono">${l.Transaction_id || '—'}</td>
+              <td class="mono fk-text" style="font-size:11px">${l.Account_no || '—'}</td>
+              <td>${l.txn_type || '—'}</td>
+              <td class="amount-negative">${l.old_amount != null ? fmt(l.old_amount) : '—'}</td>
+              <td class="amount-positive">${l.new_amount != null ? fmt(l.new_amount) : '—'}</td>
+              <td class="text-muted" style="font-size:11px">${l.logged_at || '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>` : '<div class="empty-state"><span class="empty-state-icon">📭</span><div class="empty-state-text">No log entries. Add a transaction and come back.</div></div>'}
+
+        <div class="section-title" style="margin:20px 0 14px;font-size:15px">🔍 Account Audit Log (AccountAuditLog)</div>
+        ${accLog.length ? `
+        <div class="table-wrapper"><table class="data-table">
+          <thead><tr><th>log_id</th><th>action</th><th>Account_no</th><th>old_bal</th><th>new_bal</th><th>old_status</th><th>new_status</th><th>logged_at</th></tr></thead>
+          <tbody>${accLog.map((l, i) => `
+            <tr class="row-stagger" style="animation-delay:${i * 40}ms">
+              <td class="mono text-muted">${l.log_id}</td>
+              <td>${actionBadge(l.action)}</td>
+              <td class="mono fk-text" style="font-size:11px">${l.Account_no || '—'}</td>
+              <td class="amount-negative">${l.old_balance != null ? fmt(l.old_balance) : '—'}</td>
+              <td class="amount-positive">${l.new_balance != null ? fmt(l.new_balance) : '—'}</td>
+              <td class="text-muted">${l.old_status || '—'}</td>
+              <td>${l.new_status || '—'}</td>
+              <td class="text-muted" style="font-size:11px">${l.logged_at || '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>` : '<div class="empty-state"><span class="empty-state-icon">📭</span><div class="empty-state-text">No account audit entries yet. Add/edit an account.</div></div>'}
+      </div>
+    </div>`;
+
+                document.getElementById('triggers-content').innerHTML = html;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // ── Tab 4: Cursor Simulation ──────────────────────────────────
+        async function runCursor() {
+            const btn = document.getElementById('run-cursor-btn');
+            btn.disabled = true; btn.textContent = '⏳ Running cursor…';
+            const cont = document.getElementById('cursor-content');
+            cont.innerHTML = '';
+            try {
+                const data = await apiFetch('/api/schema/cursor');
+                const creditColors = { Credit: 'var(--green)', Debit: 'var(--red)', Payment: 'var(--amber)', Transfer: 'var(--blue)' };
+
+                // Pseudocode
+                cont.innerHTML = `
+      <div class="cursor-pseudocode">${(data.pseudocode || []).map((l, i) => `<div style="${i === 0 ? 'color:var(--purple);font-weight:700' : i === data.pseudocode.length - 1 ? 'color:var(--purple);font-weight:700' : ''}">  ${l}</div>`).join('')}</div>`;
+
+                // Per-customer cursor blocks
+                (data.result || []).forEach((cust, ci) => {
+                    const block = document.createElement('div');
+                    block.className = 'cursor-customer-block';
+                    block.innerHTML = `
+        <div class="cursor-customer-header">
+          <div class="avatar-initials" style="background:linear-gradient(135deg,#2563eb,#7c3aed);font-size:13px;width:40px;height:40px">
+            ${cust.customer.split(' ').map(w => w[0]).join('')}
+          </div>
+          <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px">${cust.customer}</div>
+            <div style="font-size:12px;color:var(--text-secondary)">
+              AccHolder_Id: ${cust.AccHolder_Id} · ${cust.age}y · ${cust.sex} · ${cust.transaction_count} transaction(s)
+            </div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div class="stat-card-label">Final Running Balance</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:${cust.final_running_balance < 0 ? 'var(--red)' : 'var(--green)'}">
+              ${fmt(cust.final_running_balance)}
+            </div>
+          </div>
+        </div>
+        ${cust.rows.length ? `
+        <div class="cursor-row-header">
+          <div>ROW#</div><div>TYPE</div><div>AMOUNT</div><div>DATE</div><div>ACCOUNT</div><div>PREV BAL</div><div>RUNNING BAL</div><div>FLAG</div>
+        </div>
+        <div id="crows-${ci}"></div>` : `<div style="color:var(--text-muted);font-size:13px;padding:8px">No transactions — cursor fetched 0 rows</div>`}
+      `;
+                    cont.appendChild(block);
+
+                    // Animate rows one by one
+                    if (cust.rows.length) {
+                        cust.rows.forEach((row, ri) => {
+                            setTimeout(() => {
+                                const rowsContainer = document.getElementById('crows-' + ci);
+                                if (!rowsContainer) return;
+                                const rowEl = document.createElement('div');
+                                rowEl.className = `cursor-row ${row.flag === 'OVERDRAFT' ? 'overdraft' : 'ok'}`;
+                                rowEl.innerHTML = `
+              <div class="mono text-muted">${row.cursor_row}</div>
+              <div><span class="badge ${row.type === 'Credit' ? 'badge-credit' : row.type === 'Debit' ? 'badge-debit' : row.type === 'Payment' ? 'badge-payment' : 'badge-transfer'}" style="font-size:10px">${row.type}</span></div>
+              <div style="color:${creditColors[row.type] || 'var(--text-primary)'}">
+                ${row.type === 'Credit' ? '+' : '–'}${fmt(row.amount)}
+              </div>
+              <div class="text-muted" style="font-size:11px">${row.date}</div>
+              <div class="mono fk-text" style="font-size:10px">${row.account_no || '—'}</div>
+              <div class="text-muted">${fmt(row.prev_balance)}</div>
+              <div style="font-weight:700;color:${row.running_balance < 0 ? 'var(--red)' : row.running_balance > 0 ? 'var(--green)' : 'var(--text-muted)'}">
+                ${fmt(row.running_balance)}
+              </div>
+              <div>${row.flag === 'OVERDRAFT' ? '<span style="color:var(--red);font-size:11px">⚠️ OD</span>' : '<span style="color:var(--green);font-size:11px">✅ OK</span>'}</div>
+            `;
+                                rowsContainer.appendChild(rowEl);
+                                requestAnimationFrame(() => rowEl.classList.add('fetched'));
+                            }, (ci * 600) + (ri * 280));
+                        });
+                    }
+                });
+
+                if (!(data.result || []).length) cont.innerHTML += '<div class="empty-state"><span class="empty-state-icon">📭</span><div class="empty-state-title">No customers found</div></div>';
+            } catch (e) { showToast(e.message, 'error'); }
+            btn.disabled = false; btn.textContent = '▶ Run Cursor Simulation';
+        }
+
+        // ── Tab 5: ER Diagram ─────────────────────────────────────────
+        function renderER() {
+            const tables = [
+                {
+                    name: 'Bank', icon: '🏛️',
+                    cols: [
+                        { name: 'Bank_Id', type: 'INTEGER', key: 'PK' },
+                        { name: 'name', type: 'TEXT', key: null },
+                        { name: 'location', type: 'TEXT', key: null },
+                    ]
+                },
+                {
+                    name: 'Customers', icon: '👤',
+                    cols: [
+                        { name: 'AccHolder_Id', type: 'INTEGER', key: 'PK' },
+                        { name: 'FirstName', type: 'TEXT', key: null },
+                        { name: 'MiddleName', type: 'TEXT', key: null },
+                        { name: 'LastName', type: 'TEXT', key: null },
+                        { name: 'Age', type: 'INTEGER', key: null },
+                        { name: 'Sex', type: 'TEXT', key: null },
+                    ]
+                },
+                {
+                    name: 'BankAccount', icon: '💳',
+                    cols: [
+                        { name: 'Account_no', type: 'TEXT', key: 'PK' },
+                        { name: 'Account_Type', type: 'TEXT', key: null },
+                        { name: 'Balance', type: 'REAL', key: null },
+                        { name: 'Status', type: 'TEXT', key: null },
+                        { name: 'Date_Opened', type: 'TEXT', key: null },
+                        { name: 'IFSC_code', type: 'TEXT', key: null },
+                        { name: 'Branch_code', type: 'TEXT', key: null },
+                        { name: 'Bank_Id', type: 'INTEGER', key: 'FK', ref: 'Bank(Bank_Id)' },
+                        { name: 'AccHolder_Id', type: 'INTEGER', key: 'FK', ref: 'Customers(AccHolder_Id)' },
+                    ]
+                },
+                {
+                    name: 'LinkedCards', icon: '💳',
+                    cols: [
+                        { name: 'Card_no', type: 'TEXT', key: 'PK' },
+                        { name: 'Account_no', type: 'TEXT', key: 'FK', ref: 'BankAccount(Account_no)' },
+                    ]
+                },
+                {
+                    name: 'Txn', icon: '💸',
+                    cols: [
+                        { name: 'Transaction_id', type: 'INTEGER', key: 'PK' },
+                        { name: 'Transaction_type', type: 'TEXT', key: null },
+                        { name: 'Currency', type: 'TEXT', key: null },
+                        { name: 'Amount', type: 'REAL', key: null },
+                        { name: 'Transaction_date', type: 'TEXT', key: null },
+                        { name: 'Account_no', type: 'TEXT', key: 'FK', ref: 'BankAccount(Account_no)' },
+                        { name: 'AccHolder_Id', type: 'INTEGER', key: 'FK', ref: 'Customers(AccHolder_Id)' },
+                    ]
+                },
+                {
+                    name: 'TransactionLog', icon: '⚡',
+                    cols: [
+                        { name: 'log_id', type: 'INTEGER', key: 'PK' },
+                        { name: 'action', type: 'TEXT', key: null },
+                        { name: 'Transaction_id', type: 'INTEGER', key: null },
+                        { name: 'Account_no', type: 'TEXT', key: null },
+                        { name: 'old_amount', type: 'REAL', key: null },
+                        { name: 'new_amount', type: 'REAL', key: null },
+                        { name: 'txn_type', type: 'TEXT', key: null },
+                        { name: 'logged_at', type: 'TEXT', key: null },
+                    ]
+                },
+                {
+                    name: 'AccountAuditLog', icon: '🔍',
+                    cols: [
+                        { name: 'log_id', type: 'INTEGER', key: 'PK' },
+                        { name: 'action', type: 'TEXT', key: null },
+                        { name: 'Account_no', type: 'TEXT', key: null },
+                        { name: 'old_balance', type: 'REAL', key: null },
+                        { name: 'new_balance', type: 'REAL', key: null },
+                        { name: 'old_status', type: 'TEXT', key: null },
+                        { name: 'new_status', type: 'TEXT', key: null },
+                        { name: 'logged_at', type: 'TEXT', key: null },
+                    ]
+                },
+            ];
+
+            const fkRelations = [
+                'BankAccount.Bank_Id → Bank.Bank_Id',
+                'BankAccount.AccHolder_Id → Customers.AccHolder_Id',
+                'LinkedCards.Account_no → BankAccount.Account_no',
+                'Txn.Account_no → BankAccount.Account_no',
+                'Txn.AccHolder_Id → Customers.AccHolder_Id',
+            ];
+
+            const triggers = [
+                { name: 'trg_after_txn_insert', type: 'AFTER INSERT ON Txn', effect: '→ TransactionLog' },
+                { name: 'trg_after_txn_update', type: 'AFTER UPDATE ON Txn', effect: '→ TransactionLog' },
+                { name: 'trg_after_txn_delete', type: 'AFTER DELETE ON Txn', effect: '→ TransactionLog' },
+                { name: 'trg_balance_on_txn_insert', type: 'AFTER INSERT ON Txn', effect: '→ UPDATE BankAccount.Balance' },
+                { name: 'trg_balance_on_txn_update', type: 'AFTER UPDATE ON Txn', effect: '→ UPDATE BankAccount.Balance' },
+                { name: 'trg_balance_on_txn_delete', type: 'AFTER DELETE ON Txn', effect: '→ REVERSE BankAccount.Balance' },
+                { name: 'trg_after_account_insert', type: 'AFTER INSERT ON BankAccount', effect: '→ AccountAuditLog' },
+                { name: 'trg_after_account_update', type: 'AFTER UPDATE ON BankAccount', effect: '→ AccountAuditLog' },
+                { name: 'trg_after_account_delete', type: 'AFTER DELETE ON BankAccount', effect: '→ AccountAuditLog' },
+            ];
+
+            document.getElementById('er-content').innerHTML = `
+    <div class="section-title" style="margin-bottom:20px">Entity-Relationship Schema</div>
+    <div class="er-container">
+      ${tables.map(t => `
+        <div class="er-table-box">
+          <div class="er-table-header">${t.icon} ${t.name}</div>
+          ${t.cols.map(c => `
+            <div class="er-col ${c.key === 'PK' ? 'pk-col' : c.key === 'FK' ? 'fk-col' : ''}">
+              ${c.key === 'PK' ? '<span class="col-badge pk-badge">PK</span>' : c.key === 'FK' ? '<span class="col-badge fk-badge">FK</span>' : '<span style="width:26px;display:inline-block"></span>'}
+              ${c.name} <span style="color:var(--text-muted);font-size:10px">${c.type}</span>
+              ${c.ref ? `<span style="font-size:9px;color:var(--text-muted);margin-left:auto">→ ${c.ref}</span>` : ''}
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>
+
+    <div class="section-title" style="margin:28px 0 16px">🔗 Foreign Key Relationships</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px">
+      ${fkRelations.map(r => `<span class="rel-arrow" style="font-size:12px;padding:6px 12px">${r}</span>`).join('')}
+    </div>
+
+    <div class="section-title" style="margin-bottom:16px">⚡ Trigger Map (9 triggers)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px">
+      ${triggers.map(t => `
+        <div class="trigger-def-card" style="padding:12px 14px">
+          <div class="trigger-name" style="font-size:12px">⚡ ${t.name}</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">
+            <span style="color:var(--purple)">${t.type}</span>
+            <span style="color:var(--cyan)">${t.effect}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+        }
+
+        // ── Boot ──────────────────────────────────────────────────────
+        tabLoaded['tables'] = true;
+        loadTables();
+    </script>
+</body>
+
+</html>

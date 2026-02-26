@@ -1,0 +1,1042 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banking DBMS — Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+    <!-- ─── Sidebar ───────────────────────────────────────────────── -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-wrap">
+                <div class="logo-icon">🏦</div>
+                <div class="logo-text">
+                    <div class="logo-title">BankingOS</div>
+                    <div class="logo-sub">Database Management System</div>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+            <div class="nav-section-label">Manage</div>
+            <a href="banks.html" class="nav-item"><span class="nav-icon">🏛️</span> Banks</a>
+            <a href="customers.html" class="nav-item"><span class="nav-icon">👤</span> Customers</a>
+            <a href="accounts.html" class="nav-item"><span class="nav-icon">💳</span> Bank Accounts</a>
+            <a href="transactions.html" class="nav-item"><span class="nav-icon">💸</span> Transactions</a>
+            <div class="nav-section-label">Database</div>
+            <a href="schema.html" class="nav-item"><span class="nav-icon">🗄️</span> DB Explorer</a>
+            <a href="sql.html" class="nav-item"><span class="nav-icon">🖥️</span> SQL Console</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-dot"></div>
+            <div class="sidebar-footer-text">System Online · CIA Project</div>
+        </div>
+    </aside>
+
+    <!-- ─── Main ──────────────────────────────────────────────────── -->
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-title">Dashboard</div>
+                <div class="topbar-breadcrumb">Welcome back — live overview</div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-chip"><span class="dot"></span><span id="clock">--:--</span></div>
+                <div class="topbar-chip">📅 <span id="date-str">--</span></div>
+            </div>
+        </div>
+
+        <!-- ── SENSEX-STYLE LIVE TICKER ─────────────────────────────────── -->
+        <div id="ticker-bar" style="
+            background: linear-gradient(90deg, #0b1120 0%, #0f1b2d 100%);
+            border-bottom: 1px solid rgba(201,151,43,0.25);
+            overflow: hidden;
+            position: relative;
+            height: 38px;
+            display: flex;
+            align-items: center;
+        ">
+            <!-- LEFT LABEL -->
+            <div style="
+                flex-shrink:0; width:110px; height:100%;
+                background: linear-gradient(90deg,#0b1120 70%,transparent);
+                display:flex; align-items:center; gap:7px;
+                padding-left:14px; z-index:2; position:relative;
+            ">
+                <div
+                    style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 7px #22c55e;animation:pulse 1.2s infinite;flex-shrink:0;">
+                </div>
+                <span
+                    style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:800;color:#f6c90e;letter-spacing:.6px;white-space:nowrap;">BANKING
+                    LIVE</span>
+            </div>
+
+            <!-- SCROLLING TRACK WRAPPER -->
+            <div style="overflow:hidden;flex:1;position:relative;">
+                <div id="ticker-track"
+                    style="display:flex;align-items:center;gap:0;white-space:nowrap;will-change:transform;">
+                    <!-- items injected by JS, duplicated for infinite loop -->
+                </div>
+            </div>
+
+            <!-- RIGHT FADE -->
+            <div
+                style="flex-shrink:0;width:60px;background:linear-gradient(270deg,#0b1120 60%,transparent);height:100%;position:absolute;right:0;z-index:2;pointer-events:none;">
+            </div>
+        </div>
+
+        <div class="page-content">
+
+            <!-- STATS STRIP -->
+            <div class="stats-grid" id="stats-grid"
+                style="grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:10px;">
+                <div class="stat-card gold">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon-wrap">🏛️</div>
+                    </div>
+                    <div class="stat-card-value" id="s-banks">—</div>
+                    <div class="stat-card-label">Banks</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon-wrap">👤</div>
+                    </div>
+                    <div class="stat-card-value" id="s-customers">—</div>
+                    <div class="stat-card-label">Customers</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon-wrap">💳</div>
+                    </div>
+                    <div class="stat-card-value" id="s-accounts">—</div>
+                    <div class="stat-card-label">Accounts</div>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon-wrap">💸</div>
+                    </div>
+                    <div class="stat-card-value" id="s-txns">—</div>
+                    <div class="stat-card-label">Transactions</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon-wrap">💰</div>
+                    </div>
+                    <div class="stat-card-value" id="s-balance">—</div>
+                    <div class="stat-card-label">Balance</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon-wrap">📈</div>
+                    </div>
+                    <div class="stat-card-value" id="s-volume">—</div>
+                    <div class="stat-card-label">Volume</div>
+                </div>
+            </div>
+
+            <!-- ROW 1: Charts side by side, full width -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+                <div class="chart-card" style="display:flex;flex-direction:column;">
+                    <div class="chart-card-title" style="font-size:11px;margin-bottom:2px;">Transaction Breakdown</div>
+                    <div class="chart-card-sub" style="font-size:10px;margin-bottom:4px;opacity:0.6;">By type</div>
+                    <div class="chart-container" style="height:300px;"><canvas id="chart-txn-type"></canvas></div>
+                </div>
+                <div class="chart-card" style="display:flex;flex-direction:column;">
+                    <div class="chart-card-title" style="font-size:11px;margin-bottom:2px;">Account Types</div>
+                    <div class="chart-card-sub" style="font-size:10px;margin-bottom:4px;opacity:0.6;">Categories</div>
+                    <div class="chart-container" style="height:300px;"><canvas id="chart-acc-type"></canvas></div>
+                </div>
+            </div>
+
+            <!-- ROW 2: Recent Transactions, full width -->
+            <div style="margin-bottom:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <h2 class="section-title">Recent Transactions</h2>
+                    <a href="transactions.html" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">View All
+                        →</a>
+                </div>
+                <div class="table-wrapper" style="overflow:auto;max-height:340px;scrollbar-width:thin;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Type</th>
+                                <th>Customer</th>
+                                <th>Account</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-tbody">
+                            <tr>
+                                <td colspan="7" style="padding:20px;text-align:center;color:var(--text-muted)">Loading…
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ROW 3: Live Login Feed + Live Account Openings side by side -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+
+                <!-- Live Login Feed -->
+                <div class="chart-card"
+                    style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:360px;">
+                    <div
+                        style="padding:9px 12px;background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(139,127,255,0.12));display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid rgba(0,229,255,0.10);">
+                        <div>
+                            <div
+                                style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;color:#d8eaf8;">
+                                🟢 Live Login Activity</div>
+                            <div style="font-size:10px;color:rgba(200,220,255,0.5);margin-top:1px;">Real-time session
+                                tracker</div>
+                        </div>
+                        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+                            <span style="font-size:10px;color:var(--green);font-weight:700;"><span
+                                    id="active-count">—</span> online</span>
+                            <button onclick="simulateLogin()" id="sim-btn"
+                                style="font-size:10px;padding:4px 10px;background:rgba(0,229,255,0.12);color:#00e5ff;border:1px solid rgba(0,229,255,0.30);border-radius:6px;cursor:pointer;">⚡
+                                Simulate</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
+                        <div
+                            style="flex:1;padding:5px 8px;border-right:1px solid rgba(255,255,255,0.05);text-align:center;">
+                            <div
+                                style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">
+                                Active</div>
+                            <div id="sess-active"
+                                style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--green);">
+                                —</div>
+                        </div>
+                        <div
+                            style="flex:1;padding:5px 8px;border-right:1px solid rgba(255,255,255,0.05);text-align:center;">
+                            <div
+                                style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">
+                                Today</div>
+                            <div id="sess-today"
+                                style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--blue);">
+                                —</div>
+                        </div>
+                        <div style="flex:1;padding:5px 8px;text-align:center;">
+                            <div
+                                style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">
+                                Total</div>
+                            <div id="sess-total"
+                                style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--cyan);">
+                                —</div>
+                        </div>
+                    </div>
+                    <div id="session-feed" style="flex:1;overflow-y:auto;scrollbar-width:thin;min-height:0;"></div>
+                </div>
+
+                <!-- Live Account Openings -->
+                <div class="chart-card"
+                    style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:360px;">
+                    <div
+                        style="padding:9px 12px;background:linear-gradient(90deg,rgba(0,230,118,0.14),rgba(0,229,255,0.08));display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid rgba(0,229,255,0.08);">
+                        <div style="display:flex;align-items:center;gap:7px;">
+                            <div
+                                style="width:7px;height:7px;border-radius:50%;background:#00e676;box-shadow:0 0 8px #00e676;animation:pulse 1.2s infinite;flex-shrink:0;">
+                            </div>
+                            <span
+                                style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;color:#d8eaf8;">Live
+                                Account Openings</span>
+                            <span style="font-size:9px;color:rgba(200,220,255,0.4);">Auto · 12s</span>
+                        </div>
+                        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+                            <span id="ao-today-count"
+                                style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--gold);">—</span>
+                            <button onclick="triggerAccountOpen()" id="ao-btn"
+                                style="font-size:10px;padding:4px 10px;background:rgba(255,208,60,0.12);color:var(--gold);border:1px solid rgba(255,208,60,0.30);border-radius:6px;cursor:pointer;">＋
+                                Open</button>
+                        </div>
+                    </div>
+                    <div id="ao-feed" style="flex:1;overflow:auto;min-height:0;">
+                        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                            <thead>
+                                <tr
+                                    style="background:rgba(0,229,255,0.05);border-bottom:1px solid rgba(0,229,255,0.10);position:sticky;top:0;">
+                                    <th
+                                        style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Customer</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Acct No</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Type</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Bank</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Balance</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Opened</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ao-tbody">
+                                <tr>
+                                    <td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">
+                                        Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP LEFT: Charts -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="chart-card" style="display:flex;flex-direction:column;">
+                    <div class="chart-card-title" style="font-size:11px;margin-bottom:2px;">Transaction Breakdown
+                    </div>
+                    <div class="chart-card-sub" style="font-size:10px;margin-bottom:4px;opacity:0.6;">By type</div>
+                    <div class="chart-container" style="height:280px;max-height:320px;"><canvas
+                            id="chart-txn-type"></canvas></div>
+                </div>
+                <div class="chart-card" style="display:flex;flex-direction:column;">
+                    <div class="chart-card-title" style="font-size:11px;margin-bottom:2px;">Account Types</div>
+                    <div class="chart-card-sub" style="font-size:10px;margin-bottom:4px;opacity:0.6;">Categories
+                    </div>
+                    <div class="chart-container" style="height:280px;max-height:320px;"><canvas
+                            id="chart-acc-type"></canvas></div>
+                </div>
+            </div>
+
+            <!-- TOP RIGHT: Live Login Feed -->
+            <div class="chart-card"
+                style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:380px;">
+                <div
+                    style="padding:9px 12px;background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(139,127,255,0.12));display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid rgba(0,229,255,0.10);">
+                    <div>
+                        <div
+                            style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;color:#d8eaf8;">
+                            🟢 Live Login Activity</div>
+                        <div style="font-size:10px;color:rgba(200,220,255,0.5);margin-top:1px;">Real-time session
+                            tracker</div>
+                    </div>
+                    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+                        <span style="font-size:10px;color:var(--green);font-weight:700;"><span
+                                id="active-count">—</span> online</span>
+                        <button onclick="simulateLogin()" id="sim-btn"
+                            style="font-size:10px;padding:4px 10px;background:rgba(0,229,255,0.12);color:#00e5ff;border:1px solid rgba(0,229,255,0.30);border-radius:6px;cursor:pointer;">⚡
+                            Simulate</button>
+                    </div>
+                </div>
+                <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
+                    <div
+                        style="flex:1;padding:5px 8px;border-right:1px solid rgba(255,255,255,0.05);text-align:center;">
+                        <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">
+                            Active</div>
+                        <div id="sess-active"
+                            style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--green);">
+                            —</div>
+                    </div>
+                    <div
+                        style="flex:1;padding:5px 8px;border-right:1px solid rgba(255,255,255,0.05);text-align:center;">
+                        <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">
+                            Today</div>
+                        <div id="sess-today"
+                            style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--blue);">
+                            —</div>
+                    </div>
+                    <div style="flex:1;padding:5px 8px;text-align:center;">
+                        <div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">
+                            Total</div>
+                        <div id="sess-total"
+                            style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--cyan);">
+                            —</div>
+                    </div>
+                </div>
+                <div id="session-feed" style="flex:1;overflow-y:auto;scrollbar-width:thin;min-height:0;"></div>
+            </div>
+
+            <!-- BOTTOM LEFT: Recent Transactions -->
+            <div style="display:flex;flex-direction:column;min-height:0;">
+                <div
+                    style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-shrink:0;">
+                    <h2 class="section-title">Recent Transactions</h2>
+                    <a href="transactions.html" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">View
+                        All →</a>
+                </div>
+                <div class="table-wrapper" style="overflow-y:auto;max-height:350px;scrollbar-width:thin;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Type</th>
+                                <th>Customer</th>
+                                <th>Account</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-tbody">
+                            <tr>
+                                <td colspan="7" style="padding:20px;text-align:center;color:var(--text-muted)">
+                                    Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- BOTTOM RIGHT: Live Account Openings -->
+            <div style="display:flex;flex-direction:column;">
+                <div class="chart-card"
+                    style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:380px;">
+                    <div
+                        style="padding:9px 12px;background:linear-gradient(90deg,rgba(0,230,118,0.14),rgba(0,229,255,0.08));display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid rgba(0,229,255,0.08);">
+                        <div style="display:flex;align-items:center;gap:7px;">
+                            <div
+                                style="width:7px;height:7px;border-radius:50%;background:#00e676;box-shadow:0 0 8px #00e676;animation:pulse 1.2s infinite;flex-shrink:0;">
+                            </div>
+                            <span
+                                style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:800;color:#d8eaf8;">Live
+                                Account Openings</span>
+                            <span style="font-size:9px;color:rgba(200,220,255,0.4);">Auto · 12s</span>
+                        </div>
+                        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+                            <span id="ao-today-count"
+                                style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--gold);">—</span>
+                            <button onclick="triggerAccountOpen()" id="ao-btn"
+                                style="font-size:10px;padding:4px 10px;background:rgba(255,208,60,0.12);color:var(--gold);border:1px solid rgba(255,208,60,0.30);border-radius:6px;cursor:pointer;">＋
+                                Open</button>
+                        </div>
+                    </div>
+                    <div id="ao-feed" style="flex:1;overflow:auto;min-height:0;">
+                        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                            <thead>
+                                <tr
+                                    style="background:rgba(0,229,255,0.05);border-bottom:1px solid rgba(0,229,255,0.10);position:sticky;top:0;">
+                                    <th
+                                        style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Customer</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Acct No</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Type</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Bank</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Balance</th>
+                                    <th
+                                        style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;color:rgba(0,229,255,0.65);text-transform:uppercase;white-space:nowrap;">
+                                        Opened</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ao-tbody">
+                                <tr>
+                                    <td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">
+                                        Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /dash-grid -->
+
+        </div><!-- /page-content -->
+    </main>
+    <style>
+        /* ── Session feed animation ── */
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-14px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .session-entry {
+            animation: slideInLeft 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+
+        /* ── Sensex Ticker ── */
+        @keyframes tickerScroll {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        .ticker-running {
+            animation: tickerScroll 38s linear infinite;
+        }
+
+        .ticker-running:hover {
+            animation-play-state: paused;
+        }
+
+        .t-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 0 18px;
+            height: 38px;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            cursor: default;
+            transition: background 0.2s;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .t-chip:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .t-label {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.45);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            white-space: nowrap;
+        }
+
+        .t-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: #e2e8f0;
+            letter-spacing: .3px;
+            transition: color 0.3s;
+            white-space: nowrap;
+        }
+
+        .t-change {
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .t-up {
+            color: #22c55e;
+        }
+
+        .t-down {
+            color: #ef4444;
+        }
+
+        .t-flat {
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        @keyframes flashGreen {
+
+            0%,
+            100% {
+                background: transparent;
+            }
+
+            30% {
+                background: rgba(34, 197, 94, 0.22);
+            }
+        }
+
+        @keyframes flashRed {
+
+            0%,
+            100% {
+                background: transparent;
+            }
+
+            30% {
+                background: rgba(239, 68, 68, 0.18);
+            }
+        }
+
+        .flash-green {
+            animation: flashGreen 0.8s ease;
+        }
+
+        .flash-red {
+            animation: flashRed 0.8s ease;
+        }
+
+        /* divider pip between chips */
+        .t-sep {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(246, 201, 14, 0.35);
+            margin: 0 2px;
+            flex-shrink: 0;
+        }
+    </style>
+
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+    <script>
+        // Clock & Date
+        function tick() {
+            const now = new Date();
+            document.getElementById('clock').textContent =
+                now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('date-str').textContent =
+                now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        setInterval(tick, 1000); tick();
+
+        // Active nav
+        document.querySelector('a[href="index.html"]').classList.add('active');
+
+        let txnChart, accChart;
+
+        async function loadAll() {
+            try {
+                const [stats, txns, accounts] = await Promise.all([
+                    apiFetch('/api/stats'),
+                    apiFetch('/api/transactions'),
+                    apiFetch('/api/accounts'),
+                ]);
+
+                // Stat cards
+                animateCounter(document.getElementById('s-banks'), stats.banks);
+                animateCounter(document.getElementById('s-customers'), stats.customers);
+                animateCounter(document.getElementById('s-accounts'), stats.accounts);
+                animateCounter(document.getElementById('s-txns'), stats.transactions);
+                document.getElementById('s-balance').textContent = formatCompact(stats.totalBalance);
+                document.getElementById('s-volume').textContent = formatCompact(stats.totalVolume);
+
+                // Transaction type chart
+                const txnTypes = {};
+                txns.forEach(t => txnTypes[t.Transaction_type] = (txnTypes[t.Transaction_type] || 0) + 1);
+                const typeColors = ['#16a34a', '#dc2626', '#7c3aed', '#c9972b'];
+                const typeBorders = ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.9)'];
+
+                if (txnChart) txnChart.destroy();
+                txnChart = new Chart(document.getElementById('chart-txn-type'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(txnTypes),
+                        datasets: [{
+                            data: Object.values(txnTypes), backgroundColor: typeColors,
+                            hoverBackgroundColor: typeColors, borderWidth: 3,
+                            borderColor: typeBorders, hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        cutout: '68%',
+                        plugins: {
+                            legend: { position: 'right', labels: { padding: 18, usePointStyle: true, pointStyle: 'circle', font: { size: 12 }, color: '#4a5568' } },
+                            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} transactions` } }
+                        }
+                    }
+                });
+
+                // Account type chart
+                const accTypes = {};
+                accounts.forEach(a => accTypes[a.Account_Type] = (accTypes[a.Account_Type] || 0) + 1);
+                const accColors = ['#3b6fd4', '#0ea5c8', '#16a34a', '#7c3aed'];
+
+                if (accChart) accChart.destroy();
+                accChart = new Chart(document.getElementById('chart-acc-type'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(accTypes),
+                        datasets: [{
+                            label: 'Accounts',
+                            data: Object.values(accTypes),
+                            backgroundColor: accColors.map(c => c + '22'),
+                            borderColor: accColors,
+                            borderWidth: 2,
+                            borderRadius: 10,
+                            borderSkipped: false,
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} account${ctx.parsed.y !== 1 ? 's' : ''}` } }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#4a5568', font: { size: 12 } } },
+                            y: { grid: { color: 'rgba(26,44,82,0.06)' }, ticks: { color: '#4a5568', stepSize: 1, font: { size: 12 } }, beginAtZero: true }
+                        }
+                    }
+                });
+
+                // Recent transactions
+                const tbody = document.getElementById('recent-tbody');
+                const recent = txns.slice(0, 8);
+                if (!recent.length) {
+                    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+          <span class="empty-state-icon">💸</span>
+          <div class="empty-state-title">No Transactions</div>
+          <div class="empty-state-text">Add your first transaction to see it here</div>
+        </div></td></tr>`;
+                    return;
+                }
+                const badgeMap = { Credit: 'badge-credit', Debit: 'badge-debit', Transfer: 'badge-transfer', Payment: 'badge-payment' };
+                const signMap = { Credit: '+', Debit: '-', Transfer: '±', Payment: '↓' };
+                const colorMap = { Credit: 'amount-positive', Debit: 'amount-negative', Transfer: 'amount-neutral', Payment: 'amount-neutral' };
+                tbody.innerHTML = recent.map(t => `
+        <tr>
+          <td class="text-muted mono">#${t.Transaction_id}</td>
+          <td><span class="badge ${badgeMap[t.Transaction_type] || ''}">${t.Transaction_type}</span></td>
+          <td><strong>${t.customer_name}</strong></td>
+          <td class="mono text-muted">${t.Account_no}</td>
+          <td class="${colorMap[t.Transaction_type] || ''}">${signMap[t.Transaction_type] || ''}${formatCurrency(t.Amount, t.Currency)}</td>
+          <td><span class="badge badge-currency">${t.Currency}</span></td>
+          <td class="text-muted">${formatDate(t.Transaction_date)}</td>
+        </tr>
+      `).join('');
+            } catch (e) {
+                showToast('Failed to load dashboard: ' + e.message, 'error');
+            }
+        }
+
+        loadAll();
+
+        // ── Live Session Feed ─────────────────────────────────────────────────
+        const deviceIcon = d => d.includes('iOS') ? '🍎' : d.includes('Android') ? '🤖' : '🌐';
+        const statusDot = s => s === 'Active'
+            ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 1.5s infinite;margin-right:5px;flex-shrink:0;"></span>`
+            : s === 'Timed Out'
+                ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-right:5px;flex-shrink:0;"></span>`
+                : `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#cbd5e1;margin-right:5px;flex-shrink:0;"></span>`;
+
+        function timeAgo(dtStr) {
+            if (!dtStr) return '';
+            const diff = Math.floor((Date.now() - new Date(dtStr).getTime()) / 1000);
+            if (diff < 60) return `${diff}s ago`;
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
+        }
+
+        function renderFeed(sessions, highlightId = null) {
+            const feed = document.getElementById('session-feed');
+            if (!sessions.length) {
+                feed.innerHTML = `<div style="padding:28px;text-align:center;color:var(--text-muted);font-size:13px;">No sessions yet</div>`;
+                return;
+            }
+            feed.innerHTML = sessions.map((s, i) => {
+                const isNew = s.session_id === highlightId;
+                return `<div class="session-entry" style="
+                    display:flex;align-items:center;gap:10px;padding:10px 16px;
+                    border-bottom:1px solid var(--border);
+                    background:${isNew ? 'rgba(22,163,74,0.06)' : i % 2 === 0 ? '#fff' : '#fafaf8'};
+                    animation-delay:${i * 28}ms;
+                    transition:background 0.4s;
+                ">
+                    <div style="font-size:18px;flex-shrink:0;">${deviceIcon(s.device)}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
+                            ${statusDot(s.status)}
+                            <span style="font-weight:700;font-size:13px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.customer_name}</span>
+                            ${s.status === 'Active' ? '<span style="font-size:10px;background:rgba(22,163,74,0.1);color:var(--green);border:1px solid rgba(22,163,74,0.25);border-radius:4px;padding:1px 6px;flex-shrink:0;">LIVE</span>' : ''}
+                        </div>
+                        <div style="font-size:11px;color:var(--text-muted);display:flex;gap:8px;flex-wrap:wrap;">
+                            <span>🌆 ${s.city || '—'}</span>
+                            <span style="font-family:'JetBrains Mono',monospace;">🔌 ${s.ip_address}</span>
+                            <span>📱 ${s.device}</span>
+                            ${s.duration_mins != null ? `<span>⏱ ${s.duration_mins}m</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="font-size:11px;font-weight:600;color:${s.status === 'Active' ? 'var(--green)' : 'var(--text-muted)'};">${s.status}</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${timeAgo(s.login_time)}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function loadSessions(highlightId = null) {
+            try {
+                const [sessions, stats] = await Promise.all([
+                    apiFetch('/api/sessions?limit=15'),
+                    apiFetch('/api/sessions/stats'),
+                ]);
+                document.getElementById('active-count').textContent = stats.active;
+                document.getElementById('sess-active').textContent = stats.active;
+                document.getElementById('sess-today').textContent = stats.today;
+                document.getElementById('sess-total').textContent = stats.total;
+                renderFeed(sessions, highlightId);
+            } catch (e) { /* silent fail — feed is non-critical */ }
+        }
+
+        async function simulateLogin() {
+            const btn = document.getElementById('sim-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Logging in…';
+            try {
+                const sess = await apiFetch('/api/sessions/simulate', 'POST');
+                await loadSessions(sess?.session_id);
+                showToast(`${sess?.customer_name || 'Customer'} logged in from ${sess?.city || 'somewhere'}`, 'success');
+            } catch (e) {
+                showToast('Simulate failed: ' + e.message, 'error');
+            }
+            btn.disabled = false;
+            btn.textContent = '⚡ Simulate Login';
+        }
+
+        // Initial load + auto-poll every 8 seconds
+        loadSessions();
+        setInterval(() => loadSessions(), 8000);
+
+        // ── SENSEX-STYLE TICKER ENGINE ────────────────────────────────────────
+        let prevTickerValues = {};   // stores last values for delta comparison
+        let tickerAnimId = null;
+
+        function fmtCr(n) {
+            if (n >= 1e7) return '₹' + (n / 1e7).toFixed(2) + ' Cr';
+            if (n >= 1e5) return '₹' + (n / 1e5).toFixed(2) + ' L';
+            return '₹' + n.toLocaleString('en-IN');
+        }
+
+        async function buildTickerItems() {
+            const [stats, sesStats, accounts, txns, banks] = await Promise.all([
+                apiFetch('/api/stats'),
+                apiFetch('/api/sessions/stats'),
+                apiFetch('/api/accounts'),
+                apiFetch('/api/transactions'),
+                apiFetch('/api/banks'),
+            ]);
+
+            // Balance per bank
+            const bankBalances = {};
+            accounts.forEach(a => {
+                if (!bankBalances[a.bank_name]) bankBalances[a.bank_name] = 0;
+                bankBalances[a.bank_name] += (a.Balance || 0);
+            });
+
+            // Txn count & volume per type
+            const txnByType = {};
+            txns.forEach(t => {
+                if (!txnByType[t.Transaction_type]) txnByType[t.Transaction_type] = { count: 0, vol: 0 };
+                txnByType[t.Transaction_type].count++;
+                txnByType[t.Transaction_type].vol += (t.Amount || 0);
+            });
+
+            const items = [
+                { key: 'total_balance', label: 'TOTAL BALANCE', val: stats.totalBalance, fmt: fmtCr },
+                { key: 'total_volume', label: 'TXN VOLUME', val: stats.totalVolume, fmt: fmtCr },
+                { key: 'active_sessions', label: 'ONLINE NOW', val: sesStats.active, fmt: v => v + ' users' },
+                { key: 'sessions_today', label: 'LOGINS TODAY', val: sesStats.today, fmt: v => v + ' sessions' },
+                { key: 'total_accounts', label: 'ACCOUNTS', val: stats.accounts, fmt: v => v + ' accs' },
+                { key: 'total_customers', label: 'CUSTOMERS', val: stats.customers, fmt: v => v },
+                { key: 'total_txns', label: 'TRANSACTIONS', val: stats.transactions, fmt: v => v + ' txns' },
+            ];
+
+            // Per-bank balances
+            Object.entries(bankBalances).forEach(([bk, bal]) => {
+                const shortName = bk.replace('Bank', '').replace('State ', '').trim();
+                items.push({ key: 'bank_' + shortName, label: shortName.toUpperCase(), val: bal, fmt: fmtCr });
+            });
+
+            // Per-type txn counts
+            ['Credit', 'Debit', 'Transfer', 'Payment'].forEach(type => {
+                const d = txnByType[type];
+                if (d) items.push({ key: 'type_' + type, label: type.toUpperCase() + 'S', val: d.count, fmt: v => v + ' txns' });
+            });
+
+            return items;
+        }
+
+        function renderTicker(items) {
+            const track = document.getElementById('ticker-track');
+            const now = {};
+            items.forEach(it => now[it.key] = it.val);
+
+            const chipsHtml = items.map(it => {
+                const prev = prevTickerValues[it.key];
+                const delta = prev !== undefined ? it.val - prev : 0;
+                const upCls = delta > 0 ? 't-up' : delta < 0 ? 't-down' : 't-flat';
+                const arrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '●';
+                const flashId = 'tc-' + it.key;
+                return `<div class="t-chip" id="${flashId}">
+                    <span class="t-sep"></span>
+                    <div>
+                        <div class="t-label">${it.label}</div>
+                        <div class="t-value">${it.fmt(it.val)}</div>
+                    </div>
+                    <span class="t-change ${upCls}">${arrow}</span>
+                </div>`;
+            }).join('');
+
+            // Duplicate for seamless infinite scroll
+            track.innerHTML = chipsHtml + chipsHtml;
+
+            // Remove old animation, restart it cleanly
+            track.classList.remove('ticker-running');
+            void track.offsetWidth; // reflow
+            track.classList.add('ticker-running');
+
+            // Flash chips that changed
+            items.forEach(it => {
+                const prev = prevTickerValues[it.key];
+                if (prev === undefined) return;
+                const delta = it.val - prev;
+                if (delta === 0) return;
+                const el = document.getElementById('tc-' + it.key);
+                if (!el) return;
+                el.classList.remove('flash-green', 'flash-red');
+                void el.offsetWidth;
+                el.classList.add(delta > 0 ? 'flash-green' : 'flash-red');
+            });
+
+            prevTickerValues = now;
+        }
+
+        async function refreshTicker() {
+            try {
+                const items = await buildTickerItems();
+                renderTicker(items);
+            } catch (e) { /* non-critical */ }
+        }
+
+        refreshTicker();
+        setInterval(refreshTicker, 10000);
+
+        // ── LIVE ACCOUNT OPENINGS FEED ────────────────────────────────────────
+        const ACC_TYPE_ICON = { Savings: '🏦', Current: '🏢', FD: '📅', RD: '📈' };
+        const BANK_COLOR = {
+            'State Bank of India': '#2563eb',
+            'HDFC Bank': '#e11d48',
+            'ICICI Bank': '#7c3aed',
+            'Axis Bank': '#c9972b',
+        };
+
+        let lastAoLogId = 0;
+
+        function fmtBal(n) {
+            if (!n && n !== 0) return '—';
+            return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        }
+
+        function aoTimeAgo(dtStr) {
+            if (!dtStr) return 'just now';
+            const diff = Math.floor((Date.now() - new Date(dtStr).getTime()) / 1000);
+            if (diff < 5) return 'just now';
+            if (diff < 60) return `${diff}s ago`;
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            return `${Math.floor(diff / 3600)}h ago`;
+        }
+
+        async function loadAccountOpenings() {
+            try {
+                const rows = await apiFetch('/api/accounts/openings?limit=12');
+                const tbody = document.getElementById('ao-tbody');
+                if (!rows.length) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="padding:28px;text-align:center;color:var(--text-muted);">No account openings yet</td></tr>`;
+                    return;
+                }
+
+                // Count new entries since last load to show "NEW" badge
+                const maxId = rows[0]?.log_id || 0;
+                const hasNew = lastAoLogId > 0 && maxId > lastAoLogId;
+                if (lastAoLogId === 0) lastAoLogId = maxId;
+
+                // Update today count (rows that have logged_at = today, approximate by checking rows[*])
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const todayCount = rows.filter(r => r.logged_at && r.logged_at.startsWith(todayStr)).length;
+                document.getElementById('ao-today-count').textContent = todayCount || rows.length;
+
+                tbody.innerHTML = rows.map((r, i) => {
+                    const isNew = r.log_id > lastAoLogId;
+                    const bColor = BANK_COLOR[r.bank_name] || '#64748b';
+                    const typeIcon = ACC_TYPE_ICON[r.Account_Type] || '💳';
+                    return `<tr class="ao-row" style="
+                        border-bottom:1px solid var(--border);
+                        background:${isNew ? 'rgba(34,197,94,0.06)' : i % 2 === 0 ? '#fff' : '#fafaf8'};
+                        animation:slideInLeft 0.3s ease both;
+                        animation-delay:${i * 22}ms;
+                        transition:background 0.5s;
+                    ">
+                        <td style="padding:10px 16px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="width:32px;height:32px;border-radius:50%;
+                                    background:linear-gradient(135deg,${bColor}22,${bColor}44);
+                                    border:1px solid ${bColor}44;
+                                    display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">
+                                    ${r.Sex === 'Female' ? '👩' : '👨'}
+                                </div>
+                                <div>
+                                    <div style="font-weight:700;font-size:13px;color:var(--navy);">${r.customer_name || '—'}</div>
+                                    <div style="font-size:10px;color:var(--text-muted);">${r.Age ? r.Age + 'y' : ''} ${r.Sex || ''}</div>
+                                </div>
+                                ${isNew ? '<span style="font-size:9px;background:#22c55e;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:4px;">NEW</span>' : ''}
+                            </div>
+                        </td>
+                        <td style="padding:10px 12px;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--navy);">${r.Account_no || '—'}</td>
+                        <td style="padding:10px 12px;">
+                            <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;
+                                padding:3px 8px;border-radius:6px;background:${bColor}12;color:${bColor};border:1px solid ${bColor}33;">
+                                ${typeIcon} ${r.Account_Type || '—'}
+                            </span>
+                        </td>
+                        <td style="padding:10px 12px;">
+                            <span style="font-size:11px;font-weight:700;color:${bColor};">${r.bank_name || '—'}</span>
+                        </td>
+                        <td style="padding:10px 12px;">
+                            <span style="font-family:\'Space Grotesk\',sans-serif;font-size:13px;font-weight:800;color:var(--green);">
+                                ${fmtBal(r.new_balance)}
+                            </span>
+                        </td>
+                        <td style="padding:10px 12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--text-muted);">${r.IFSC_code || '—'}</td>
+                        <td style="padding:10px 12px;text-align:right;font-size:11px;color:var(--text-muted);">${aoTimeAgo(r.logged_at)}</td>
+                    </tr>`;
+                }).join('');
+
+                if (hasNew) lastAoLogId = maxId;
+            } catch (e) { /* non-critical */ }
+        }
+
+        async function triggerAccountOpen() {
+            const btn = document.getElementById('ao-btn');
+            btn.disabled = true; btn.textContent = '⏳ Opening…';
+            try {
+                const result = await apiFetch('/api/accounts/simulate', 'POST');
+                await loadAccountOpenings();
+                lastAoLogId = 0; // force NEW badge on next render
+                showToast(`✅ ${result.customer_name} — ${result.account_type} account opened at ${result.bank_name} (${fmtBal(result.balance)})`, 'success');
+                refreshTicker(); // update balance chips immediately
+            } catch (e) {
+                showToast('Failed: ' + e.message, 'error');
+            }
+            btn.disabled = false; btn.textContent = '＋ Open Account Now';
+        }
+
+        // Initial load
+        loadAccountOpenings();
+        // Poll for new entries every 6 seconds
+        setInterval(loadAccountOpenings, 6000);
+        // Auto-simulate a new account opening every 12 seconds
+        setInterval(() => {
+            apiFetch('/api/accounts/simulate', 'POST').catch(() => { });
+        }, 12000);
+    </script>
+</body>
+
+</html>

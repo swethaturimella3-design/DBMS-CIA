@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banking DBMS — Banks</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-wrap">
+                <div class="logo-icon">🏦</div>
+                <div class="logo-text">
+                    <div class="logo-title">BankingOS</div>
+                    <div class="logo-sub">Database Management System</div>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+            <div class="nav-section-label">Manage</div>
+            <a href="banks.html" class="nav-item active"><span class="nav-icon">🏛️</span> Banks</a>
+            <a href="customers.html" class="nav-item"><span class="nav-icon">👤</span> Customers</a>
+            <a href="accounts.html" class="nav-item"><span class="nav-icon">💳</span> Bank Accounts</a>
+            <a href="transactions.html" class="nav-item"><span class="nav-icon">💸</span> Transactions</a>
+            <div class="nav-section-label">Database</div>
+            <a href="schema.html" class="nav-item"><span class="nav-icon">🗄️</span> DB Explorer</a>
+            <a href="sql.html" class="nav-item"><span class="nav-icon">🖥️</span> SQL Console</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-dot"></div>
+            <div class="sidebar-footer-text">System Online · CIA Project</div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-title">Banks</div>
+                <div class="topbar-breadcrumb">Manage registered financial institutions</div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-chip" id="bank-count">— banks</div>
+            </div>
+        </div>
+
+        <div class="page-content">
+            <div class="section-header">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Search by name or location…" />
+                </div>
+                <button class="btn btn-gold" onclick="openAddModal()">＋ Add Bank</button>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table" id="banks-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Bank Name</th>
+                            <th>Location</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="banks-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="bank-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Add Bank</h2>
+                <button class="modal-close" onclick="closeModal('bank-modal')">✕</button>
+            </div>
+            <form id="bank-form">
+                <input type="hidden" id="edit-id" />
+                <div class="form-grid">
+                    <div class="form-group full">
+                        <label class="form-label">Bank Name</label>
+                        <input class="form-input" id="f-name" placeholder="e.g. State Bank of India" required />
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">Headquarters / Location</label>
+                        <input class="form-input" id="f-location" placeholder="e.g. Mumbai, Maharashtra" required />
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('bank-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Bank</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+    <script>
+        let banks = [];
+
+        async function load() {
+            renderSkeletonRows('banks-tbody', 4, 4);
+            try {
+                banks = await apiFetch('/api/banks');
+                document.getElementById('bank-count').textContent = `${banks.length} bank${banks.length !== 1 ? 's' : ''}`;
+                render();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        function render() {
+            const tbody = document.getElementById('banks-tbody');
+            if (!banks.length) {
+                tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><span class="empty-state-icon">🏛️</span><div class="empty-state-title">No Banks Yet</div><div class="empty-state-text">Add your first bank to get started</div></div></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = banks.map(b => `
+      <tr>
+        <td class="mono text-muted">${String(b.Bank_Id).padStart(3, '0')}</td>
+        <td><strong style="color:var(--text-primary)">${b.name}</strong></td>
+        <td class="text-muted">📍 ${b.location}</td>
+        <td style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-edit" onclick="openEdit(${b.Bank_Id})">✏️ Edit</button>
+          <button class="btn btn-del" onclick="del(${b.Bank_Id},'${b.name.replace(/'/g, "\\'")}')">🗑️ Delete</button>
+        </td>
+      </tr>`).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = 'Add Bank';
+            document.getElementById('edit-id').value = '';
+            document.getElementById('f-name').value = '';
+            document.getElementById('f-location').value = '';
+            openModal('bank-modal');
+        }
+
+        function openEdit(id) {
+            const b = banks.find(x => x.Bank_Id === id);
+            if (!b) return;
+            document.getElementById('modal-title').textContent = 'Edit Bank';
+            document.getElementById('edit-id').value = id;
+            document.getElementById('f-name').value = b.name;
+            document.getElementById('f-location').value = b.location;
+            openModal('bank-modal');
+        }
+
+        function del(id, name) {
+            showConfirm({
+                title: 'Delete Bank?',
+                message: `"${name}" and all linked accounts will be permanently removed.`,
+                icon: '🗑️', confirmText: 'Yes, Delete',
+                onConfirm: async () => {
+                    try { await apiFetch(`/api/banks/${id}`, 'DELETE'); showToast('Bank deleted', 'success'); load(); }
+                    catch (e) { showToast(e.message, 'error'); }
+                }
+            });
+        }
+
+        document.getElementById('bank-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const body = { name: document.getElementById('f-name').value.trim(), location: document.getElementById('f-location').value.trim() };
+            try {
+                if (id) { await apiFetch(`/api/banks/${id}`, 'PUT', body); showToast('Bank updated ✓', 'success'); }
+                else { await apiFetch('/api/banks', 'POST', body); showToast('Bank added ✓', 'success'); }
+                closeModal('bank-modal'); load();
+            } catch (e) { showToast(e.message, 'error'); }
+        });
+
+        filterTable('search-input', 'banks-table');
+        load();
+    </script>
+</body>
+
+</html>

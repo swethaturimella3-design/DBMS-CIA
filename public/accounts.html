@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Banking DBMS — Bank Accounts</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-wrap">
+                <div class="logo-icon">🏦</div>
+                <div class="logo-text">
+                    <div class="logo-title">BankingOS</div>
+                    <div class="logo-sub">Database Management System</div>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="index.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+            <div class="nav-section-label">Manage</div>
+            <a href="banks.html" class="nav-item"><span class="nav-icon">🏛️</span> Banks</a>
+            <a href="customers.html" class="nav-item"><span class="nav-icon">👤</span> Customers</a>
+            <a href="accounts.html" class="nav-item active"><span class="nav-icon">💳</span> Bank Accounts</a>
+            <a href="transactions.html" class="nav-item"><span class="nav-icon">💸</span> Transactions</a>
+            <div class="nav-section-label">Database</div>
+            <a href="schema.html" class="nav-item"><span class="nav-icon">🗄️</span> DB Explorer</a>
+            <a href="sql.html" class="nav-item"><span class="nav-icon">🖥️</span> SQL Console</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-dot"></div>
+            <div class="sidebar-footer-text">System Online · CIA Project</div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-title">Bank Accounts</div>
+                <div class="topbar-breadcrumb">BankAccount table — all attributes with PK · FK relationships &amp;
+                    linked cards</div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-chip" id="acc-count"><span class="dot"></span>—</div>
+            </div>
+        </div>
+
+        <div class="page-content">
+
+            <!-- Schema info strip -->
+            <div class="schema-strip">
+                <div class="schema-pill pk-pill">🔑 PK: Account_no</div>
+                <div class="schema-pill fk-pill">🔗 FK: Bank_Id → Bank(Bank_Id)</div>
+                <div class="schema-pill fk-pill">🔗 FK: AccHolder_Id → Customers(AccHolder_Id)</div>
+                <div class="schema-pill join-pill">⋈ JOIN: Bank, Customers, LinkedCards</div>
+            </div>
+
+            <div class="section-header">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+                    <div class="search-bar">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-input" placeholder="Search accounts…" />
+                    </div>
+                    <select class="form-select" id="status-filter" style="width:150px">
+                        <option value="">All Statuses</option>
+                        <option>Active</option>
+                        <option>Inactive</option>
+                        <option>Frozen</option>
+                    </select>
+                    <select class="form-select" id="type-filter" style="width:170px">
+                        <option value="">All Types</option>
+                        <option>Savings</option>
+                        <option>Current</option>
+                        <option>Salary</option>
+                        <option>Fixed Deposit</option>
+                    </select>
+                </div>
+                <button class="btn btn-gold" onclick="openAddModal()">＋ Add Account</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="data-table" id="acc-table">
+                    <thead>
+                        <tr>
+                            <th><span class="col-badge pk-badge">PK</span> Account_no</th>
+                            <th>Account_Type</th>
+                            <th><span class="col-badge fk-badge">FK</span> AccHolder_Id</th>
+                            <th>customer_name <span class="col-badge join-badge">JOIN</span></th>
+                            <th><span class="col-badge fk-badge">FK</span> Bank_Id</th>
+                            <th>bank_name <span class="col-badge join-badge">JOIN</span></th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                            <th>Date_Opened</th>
+                            <th>IFSC_code</th>
+                            <th>Branch_code</th>
+                            <th>LinkedCards <span class="col-badge join-badge">JOIN</span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="acc-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal-overlay" id="acc-modal">
+        <div class="modal" style="max-width:640px">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Add Bank Account</h2>
+                <button class="modal-close" onclick="closeModal('acc-modal')">✕</button>
+            </div>
+            <form id="acc-form">
+                <input type="hidden" id="edit-acno" />
+                <div class="form-grid">
+                    <div class="form-group full">
+                        <label class="form-label"><span class="col-badge pk-badge"
+                                style="margin-right:6px">PK</span>Account Number</label>
+                        <input class="form-input mono" id="f-acno" placeholder="e.g. SBI0001001" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Account Type</label>
+                        <select class="form-select" id="f-type" required>
+                            <option value="">Select…</option>
+                            <option>Savings</option>
+                            <option>Current</option>
+                            <option>Salary</option>
+                            <option>Fixed Deposit</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="f-status" required>
+                            <option value="">Select…</option>
+                            <option>Active</option>
+                            <option>Inactive</option>
+                            <option>Frozen</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Opening Balance (₹)</label>
+                        <input class="form-input" id="f-balance" type="number" step="0.01" min="0" placeholder="0.00" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date Opened</label>
+                        <input class="form-input" id="f-date" type="date" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IFSC Code</label>
+                        <input class="form-input mono" id="f-ifsc" placeholder="SBIN0001234" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Branch Code</label>
+                        <input class="form-input mono" id="f-branch" placeholder="BR001" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><span class="col-badge fk-badge"
+                                style="margin-right:6px">FK</span>Bank → Bank(Bank_Id)</label>
+                        <select class="form-select" id="f-bank" required>
+                            <option value="">Select Bank…</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label"><span class="col-badge fk-badge"
+                                style="margin-right:6px">FK</span>Account Holder → Customers(AccHolder_Id)</label>
+                        <select class="form-select" id="f-customer" required>
+                            <option value="">Select Customer…</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">Linked Cards <span
+                                style="color:var(--text-muted);font-size:10px;font-weight:400">(one per
+                                line)</span></label>
+                        <textarea class="form-textarea" id="f-cards"
+                            placeholder="4532 1234 5678 9010&#10;5412 7534 1234 5678"></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('acc-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="app.js"></script>
+    <script>
+        let accounts = [], banks = [], customers = [], filtered = [];
+
+        async function loadAll() {
+            renderSkeletonRows('acc-tbody', 10, 13);
+            try {
+                [accounts, banks, customers] = await Promise.all([
+                    apiFetch('/api/accounts'), apiFetch('/api/banks'), apiFetch('/api/customers')
+                ]);
+                document.getElementById('acc-count').innerHTML = `<span class="dot"></span>${accounts.length} account${accounts.length !== 1 ? 's' : ''}`;
+                populateSelects(); applyFilters();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        function populateSelects() {
+            document.getElementById('f-bank').innerHTML = '<option value="">Select Bank…</option>' +
+                banks.map(b => `<option value="${b.Bank_Id}">${b.name} (ID: ${b.Bank_Id})</option>`).join('');
+            document.getElementById('f-customer').innerHTML = '<option value="">Select Customer…</option>' +
+                customers.map(c => `<option value="${c.AccHolder_Id}">${c.FirstName} ${c.LastName} (ID: ${c.AccHolder_Id})</option>`).join('');
+        }
+
+        function applyFilters() {
+            const q = document.getElementById('search-input').value.toLowerCase();
+            const st = document.getElementById('status-filter').value;
+            const ty = document.getElementById('type-filter').value;
+            filtered = accounts.filter(a =>
+                (!q || JSON.stringify(a).toLowerCase().includes(q)) &&
+                (!st || a.Status === st) &&
+                (!ty || a.Account_Type === ty)
+            );
+            renderTable();
+        }
+
+        const statusBadge = { Active: 'badge-active', Inactive: 'badge-inactive', Frozen: 'badge-frozen' };
+        const typeBadge = { Savings: 'badge-savings', Current: 'badge-current', Salary: 'badge-salary', 'Fixed Deposit': 'badge-fd' };
+        const statusDot = { Active: 'var(--green)', Inactive: 'var(--amber)', Frozen: 'var(--blue)' };
+
+        function renderTable() {
+            const tbody = document.getElementById('acc-tbody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state"><span class="empty-state-icon">💳</span><div class="empty-state-title">No Accounts Found</div><div class="empty-state-text">Try adjusting your filters</div></div></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = filtered.map((a, i) => {
+                const maxBal = Math.max(...accounts.map(x => x.Balance || 0)) || 1;
+                const pct = Math.min(100, Math.round((a.Balance / maxBal) * 100));
+                const cards = (a.LinkedCards || []);
+                return `
+    <tr class="row-stagger" style="animation-delay:${i * 55}ms" onclick="toggleDrawer(this, ${JSON.stringify(JSON.stringify(a))})">
+      <td><span class="pk-value mono">🔑 ${a.Account_no}</span></td>
+      <td><span class="badge ${typeBadge[a.Account_Type] || 'badge-savings'}">${a.Account_Type}</span></td>
+      <td><span class="fk-chip" title="FK → Customers(AccHolder_Id)">🔗 ${a.AccHolder_Id}</span></td>
+      <td>
+        <div class="customer-cell">
+          <div class="avatar-chip">${(a.customer_name || '?')[0]}</div>
+          <strong>${a.customer_name}</strong>
+        </div>
+      </td>
+      <td><span class="fk-chip" title="FK → Bank(Bank_Id)">🔗 ${a.Bank_Id}</span></td>
+      <td class="text-muted" style="font-size:13px">${a.bank_name}</td>
+      <td>
+        <div class="balance-cell">
+          <span class="amount-positive">${formatCurrency(a.Balance)}</span>
+          <div class="balance-bar"><div class="balance-fill" style="width:${pct}%"></div></div>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="status-dot-anim" style="background:${statusDot[a.Status] || 'var(--text-muted)'};box-shadow:0 0 6px ${statusDot[a.Status] || 'transparent'}"></div>
+          <span class="badge ${statusBadge[a.Status] || ''}">${a.Status}</span>
+        </div>
+      </td>
+      <td class="text-muted">${formatDate(a.Date_Opened)}</td>
+      <td class="mono text-muted" style="font-size:11px">${a.IFSC_code}</td>
+      <td class="mono text-muted" style="font-size:11px">${a.Branch_code}</td>
+      <td>${cards.length ? cards.map(c => `<span class="card-chip">💳 ${c}</span>`).join('') : '<span class="text-muted" style="font-size:12px">—</span>'}</td>
+      <td onclick="event.stopPropagation()" style="display:flex;gap:8px">
+        <button class="btn btn-edit" onclick='openEdit(${JSON.stringify(a.Account_no)})'>✏️ Edit</button>
+        <button class="btn btn-del"  onclick='del(${JSON.stringify(a.Account_no)})'>🗑️</button>
+      </td>
+    </tr>
+    <tr class="row-drawer-row" id="drawer-${a.Account_no.replace(/[^a-z0-9]/gi, '_')}" style="display:none">
+      <td colspan="13">
+        <div class="row-drawer">
+          <div class="drawer-title">📋 Full Record — BankAccount</div>
+          <div class="drawer-grid">
+            <div class="drawer-field"><span class="drawer-key pk-text">🔑 Account_no (PK)</span><span class="drawer-val mono">${a.Account_no}</span></div>
+            <div class="drawer-field"><span class="drawer-key">Account_Type</span><span class="drawer-val">${a.Account_Type}</span></div>
+            <div class="drawer-field"><span class="drawer-key">Balance</span><span class="drawer-val amount-positive">${formatCurrency(a.Balance)}</span></div>
+            <div class="drawer-field"><span class="drawer-key">Status</span><span class="drawer-val">${a.Status}</span></div>
+            <div class="drawer-field"><span class="drawer-key">Date_Opened</span><span class="drawer-val">${a.Date_Opened}</span></div>
+            <div class="drawer-field"><span class="drawer-key">IFSC_code</span><span class="drawer-val mono">${a.IFSC_code}</span></div>
+            <div class="drawer-field"><span class="drawer-key">Branch_code</span><span class="drawer-val mono">${a.Branch_code}</span></div>
+            <div class="drawer-field"><span class="drawer-key fk-text">🔗 Bank_Id (FK → Bank)</span><span class="drawer-val">${a.Bank_Id} — ${a.bank_name}</span></div>
+            <div class="drawer-field"><span class="drawer-key fk-text">🔗 AccHolder_Id (FK → Customers)</span><span class="drawer-val">${a.AccHolder_Id} — ${a.customer_name}</span></div>
+            <div class="drawer-field"><span class="drawer-key join-text">⋈ LinkedCards (via JOIN)</span><span class="drawer-val">${cards.join(', ') || 'None'}</span></div>
+          </div>
+          <div class="drawer-rel">
+            <span class="rel-arrow">Account_no → LinkedCards.Account_no</span>
+            <span class="rel-arrow">Bank_Id → Bank.Bank_Id</span>
+            <span class="rel-arrow">AccHolder_Id → Customers.AccHolder_Id</span>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+            }).join('');
+        }
+
+        function toggleDrawer(row, jsonStr) {
+            const a = JSON.parse(jsonStr);
+            const drawerId = 'drawer-' + a.Account_no.replace(/[^a-z0-9]/gi, '_');
+            const drawerRow = document.getElementById(drawerId);
+            if (!drawerRow) return;
+            const isOpen = drawerRow.style.display !== 'none';
+            // close all
+            document.querySelectorAll('.row-drawer-row').forEach(r => r.style.display = 'none');
+            document.querySelectorAll('.row-stagger').forEach(r => r.classList.remove('row-selected'));
+            if (!isOpen) { drawerRow.style.display = ''; row.classList.add('row-selected'); }
+        }
+
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = 'Add Bank Account';
+            document.getElementById('edit-acno').value = '';
+            document.getElementById('f-acno').disabled = false;
+            ['f-acno', 'f-ifsc', 'f-branch', 'f-cards'].forEach(id => document.getElementById(id).value = '');
+            ['f-type', 'f-status', 'f-bank', 'f-customer'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('f-balance').value = '0';
+            document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+            openModal('acc-modal');
+        }
+
+        function openEdit(acno) {
+            const a = accounts.find(x => x.Account_no === acno);
+            if (!a) return;
+            document.getElementById('modal-title').textContent = 'Edit Account';
+            document.getElementById('edit-acno').value = acno;
+            document.getElementById('f-acno').value = acno;
+            document.getElementById('f-acno').disabled = true;
+            document.getElementById('f-type').value = a.Account_Type;
+            document.getElementById('f-status').value = a.Status;
+            document.getElementById('f-balance').value = a.Balance;
+            document.getElementById('f-date').value = a.Date_Opened;
+            document.getElementById('f-ifsc').value = a.IFSC_code;
+            document.getElementById('f-branch').value = a.Branch_code;
+            document.getElementById('f-bank').value = a.Bank_Id;
+            document.getElementById('f-customer').value = a.AccHolder_Id;
+            document.getElementById('f-cards').value = (a.LinkedCards || []).join('\n');
+            openModal('acc-modal');
+        }
+
+        function del(acno) {
+            showConfirm({
+                title: 'Delete Account?',
+                message: `Account ${acno} and all its transactions will be permanently removed.`,
+                icon: '🗑️', confirmText: 'Yes, Delete',
+                onConfirm: async () => {
+                    try { await apiFetch(`/api/accounts/${acno}`, 'DELETE'); showToast('Account deleted', 'success'); loadAll(); }
+                    catch (e) { showToast(e.message, 'error'); }
+                }
+            });
+        }
+
+        document.getElementById('acc-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('edit-acno').value;
+            const cards = document.getElementById('f-cards').value.split('\n').map(x => x.trim()).filter(Boolean);
+            const body = {
+                Account_no: document.getElementById('f-acno').value.trim(),
+                Account_Type: document.getElementById('f-type').value,
+                Balance: parseFloat(document.getElementById('f-balance').value || 0),
+                Status: document.getElementById('f-status').value,
+                Date_Opened: document.getElementById('f-date').value,
+                IFSC_code: document.getElementById('f-ifsc').value.trim(),
+                Branch_code: document.getElementById('f-branch').value.trim(),
+                Bank_Id: parseInt(document.getElementById('f-bank').value),
+                AccHolder_Id: parseInt(document.getElementById('f-customer').value),
+                LinkedCards: cards,
+            };
+            try {
+                if (editId) { await apiFetch(`/api/accounts/${editId}`, 'PUT', body); showToast('Account updated ✓', 'success'); }
+                else { await apiFetch('/api/accounts', 'POST', body); showToast('Account created ✓', 'success'); }
+                closeModal('acc-modal'); loadAll();
+            } catch (e) { showToast(e.message, 'error'); }
+        });
+
+        ['search-input', 'status-filter', 'type-filter'].forEach(id => {
+            document.getElementById(id).addEventListener('input', applyFilters);
+            document.getElementById(id).addEventListener('change', applyFilters);
+        });
+        loadAll();
+    </script>
+</body>
+
+</html>
